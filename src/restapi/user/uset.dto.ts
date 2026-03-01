@@ -5,6 +5,7 @@ import {
   IsNotEmpty,
   IsEmail,
   MinLength,
+  Matches,
   IsNumber,
 } from 'class-validator';
 
@@ -59,4 +60,25 @@ export class SuccessResponseDto {
   message?: string;
   @ApiResponseProperty()
   token?: string;
+}
+
+
+export class VerifyOtpDto {
+
+  @ApiProperty({
+ 
+    description: 'User phone number in E.164 format'
+  })
+
+  @IsNotEmpty()
+  phoneNumber: string;
+
+  @ApiProperty({
+    example: '123456',
+    description: '6-digit one time password'
+  })
+  @IsString()
+  @Matches(/^\d{6}$/, { message: 'OTP must be a 6-digit number' })
+  @IsNotEmpty()
+  otp: string;
 }
