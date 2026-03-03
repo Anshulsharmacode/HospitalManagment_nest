@@ -32,3 +32,8 @@ export function verifyOTP(inputOtp, storedOtp, expiresAt) {
   }
   return inputOtp === storedOtp;
 }
+
+
+export function emailNormalize(email){
+  return email.toLowerCase()
+}
