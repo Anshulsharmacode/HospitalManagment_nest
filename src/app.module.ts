@@ -1,4 +1,6 @@
 import { Module } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Admission } from './db/entity/admission.entity';
 import { Appointment } from './db/entity/appointment.entity';
@@ -28,10 +30,22 @@ import { Ward } from './db/entity/ward.entity';
 import { JwtStrategy } from './jwt/strategies/auth.strategies';
 import { UserController } from './restapi/user/user.controller';
 import { UserService } from './restapi/user/user.service';
+import { AppointmentController } from './restapi/appointment/appointment.controller';
+import { AppointmentService } from './restapi/appointment/appointment.service';
+import { ConfigModule } from '@nestjs/config';
 
 @Module({
   imports: [
     DataBaseModule,
+    ConfigModule.forRoot({
+      isGlobal: true,
+    }),
+
+    ThrottlerModule.forRoot([
+      { name: 'perDay', ttl: 1000 * 60 * 60 * 24, limit: 500 },
+      { name: 'perHour', ttl: 1000 * 60 * 60, limit: 120 },
+      { name: 'perMinute', ttl: 1000 * 60, limit: 20 },
+    ]),
     TypeOrmModule.forFeature([
       User,
       Otp,
@@ -57,7 +71,16 @@ import { UserService } from './restapi/user/user.service';
       AuditLog,
     ]),
   ],
-  controllers: [AppController, UserController],
-  providers: [AppService, UserService, JwtStrategy],
+  controllers: [AppController, UserController, AppointmentController],
+  providers: [
+    AppService,
+    UserService,
+    AppointmentService,
+    JwtStrategy,
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
+  ],
 })
 export class AppModule {}
