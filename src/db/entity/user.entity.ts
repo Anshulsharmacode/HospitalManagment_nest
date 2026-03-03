@@ -14,7 +14,7 @@ export enum UserRole {
   ENGINEER = 'ENGINEER',
   RECEPTION = 'RECEPTION',
   PATIENT = 'PATIENT',
-  EMPLOYEE = 'EMPLOYEE',
+  HR = 'HR',
 
 }
 

@@ -9,6 +9,8 @@ import {
   IsNumber,
 } from 'class-validator';
 
+import { UserRole } from 'src/db/entity/user.entity';
+
 export class SignUpDto {
   @ApiProperty({ example: 'john_doe' })
   @IsString()
@@ -34,6 +36,38 @@ export class SignUpDto {
   @IsNumber()
   @IsNotEmpty()
   phoneNumber: number;
+}
+
+export class CreateStaffDto {
+  @ApiProperty({ example: 'john_doe' })
+  @IsString()
+  @IsNotEmpty()
+  userName: string;
+
+  @ApiProperty({ example: 'john@example.com' })
+  @IsEmail({}, { message: 'Invalid email address' })
+  @IsNotEmpty()
+  email: string;
+
+  @ApiProperty({ example: 'strongpassword123' })
+  @IsString()
+  @MinLength(6, { message: 'Password must be at least 6 characters' })
+  password: string;
+
+  @ApiProperty({ example: 'John Doe' })
+  @IsString()
+  @IsNotEmpty()
+  name: string;
+
+  @ApiProperty({ example: '7839485733' })
+  @IsNumber()
+  @IsNotEmpty()
+  phoneNumber: number;
+
+  @ApiProperty({ example: 'DOCTOR', enum: UserRole })
+  @IsString()
+  @IsNotEmpty()
+  role: UserRole;
 }
 
 export class LoginDto {

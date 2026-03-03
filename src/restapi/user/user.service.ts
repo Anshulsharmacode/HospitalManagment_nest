@@ -2,12 +2,13 @@ import {
   BadRequestException,
   ForbiddenException,
   Injectable,
+  NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { MoreThan, Repository } from 'typeorm';
 
 import { User, UserRole } from 'src/db/entity/user.entity';
-import { LoginDto, SignUpDto, SuccessResponseDto } from './uset.dto';
+import { CreateStaffDto, LoginDto, SignUpDto, SuccessResponseDto } from './uset.dto';
 import { comparePassword, hashPassword } from 'src/utills/utils';
 import { emailNormalize, generateOTP, generateToken } from 'src/constant/constant';
 import { apiSuccess } from 'src/constant/Api.dto';
@@ -38,18 +39,57 @@ export class UserService {
 
     const passwordHash = await hashPassword(signup.password);
 
-    await this.userRepository.save(
-     {
-        email,
-        password: passwordHash,
-        phoneNumber: String(signup.phoneNumber),
-        role: UserRole.PATIENT,
-        isActive: true,
-        isOtpVerified: false,
-      },
-    );
+    await this.userRepository.save({
+      email,
+      password: passwordHash,
+      phoneNumber: String(signup.phoneNumber),
+      userName: signup.userName,
+      name: signup.name,
+      role: UserRole.PATIENT,
+      isActive: true,
+      isOtpVerified: false,
+    });
 
-    return apiSuccess('Dealer registered successfully');
+    return apiSuccess('User registered successfully');
+  }
+
+  async createStaff(
+    creatorRole: UserRole,
+    staffDto: CreateStaffDto,
+  ): Promise<SuccessResponseDto> {
+    // Only ADMIN and HR can create staff
+    if (creatorRole !== UserRole.ADMIN && creatorRole !== UserRole.HR) {
+      throw new ForbiddenException('Only ADMIN or HR can create staff users');
+    }
+
+    const email = emailNormalize(staffDto.email);
+
+    console.log("enail",email)
+
+    const exists = await this.userRepository.findOne({ where: { email } });
+    if (exists) {
+      throw new BadRequestException('User already exists');
+    }
+
+    // Prevent creating PATIENT through staff creation
+    if (staffDto.role === UserRole.PATIENT) {
+      throw new BadRequestException('Use signup endpoint for patient registration');
+    }
+
+    const passwordHash = await hashPassword(staffDto.password);
+
+    await this.userRepository.save({
+      email,
+      password: passwordHash,
+      phoneNumber: String(staffDto.phoneNumber),
+      userName: staffDto.userName,
+      name: staffDto.name,
+      role: staffDto.role,
+      isActive: true,
+      isOtpVerified: true, // Staff users don't need OTP verification
+    });
+
+    return apiSuccess('Staff user created successfully');
   }
 
   async login(loginDto: LoginDto): Promise<SuccessResponseDto> {
@@ -64,6 +104,7 @@ export class UserService {
         role: UserRole.ADMIN,
         email,
       });
+      console.log("Toek",token)
 
       return apiSuccess('Dealer registered successfully', { token });
     }
@@ -146,5 +187,35 @@ export class UserService {
       message: 'Dealer login successful',
       // token,
     };
+  }
+
+  async updateUserRole(
+    updaterRole: UserRole,
+    userId: string,
+    role: UserRole,
+  ): Promise<SuccessResponseDto> {
+    // Only ADMIN and HR can update roles
+    if (updaterRole !== UserRole.ADMIN && updaterRole !== UserRole.HR) {
+      throw new ForbiddenException('Only ADMIN or HR can update user roles');
+    }
+
+    if (!Object.values(UserRole).includes(role)) {
+      throw new BadRequestException('Invalid role');
+    }
+
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    // HR cannot update ADMIN roles (optional security restriction)
+    if (updaterRole === UserRole.HR && user.role === UserRole.ADMIN) {
+      throw new ForbiddenException('HR cannot modify ADMIN users');
+    }
+
+    user.role = role;
+    await this.userRepository.save(user);
+
+    return apiSuccess('User role updated successfully');
   }
 }
